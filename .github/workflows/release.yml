@@ -70,6 +70,26 @@ jobs:
           npm run compile
           npm test
 
+      # 用固定的自签名证书签名：ad-hoc 签名的身份由二进制派生（app-<hash>），
+      # 每次更新都变，macOS 的屏幕录制/麦克风授权就跟着失效。用同一张证书签名后，
+      # 设计化要求（identifier + 证书根）跨版本不变，权限才能继承。
+      - name: 导入代码签名证书
+        env:
+          CERT_P12: ${{ secrets.APPLE_CERT_P12_BASE64 }}
+          CERT_PASSWORD: ${{ secrets.APPLE_CERT_PASSWORD }}
+        run: |
+          set -euo pipefail
+          KEYCHAIN="$RUNNER_TEMP/yimu-signing.keychain-db"
+          security create-keychain -p actions "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p actions "$KEYCHAIN"
+          printf '%s' "$CERT_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN" -P "$CERT_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k actions "$KEYCHAIN" >/dev/null
+          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
+          rm -f "$RUNNER_TEMP/cert.p12"
+          security find-identity -v -p codesigning "$KEYCHAIN"
+
       # 产物发到本仓库：.dmg、.app.tar.gz、.sig、latest.json。
       # 必须是正式发布（非草稿）：草稿不算 latest，releases/latest/download/latest.json 会 404。
       - uses: tauri-apps/tauri-action@v0
