@@ -30,5 +30,6 @@
 |---|---|---|
 | 本仓库 | `SOURCE_REPO_TOKEN` | 只读拉取私有源码（细粒度 PAT，private 仓库的 Contents: Read） |
 | 本仓库 | `TAURI_SIGNING_PRIVATE_KEY` / `..._PASSWORD` | 签名更新包，私钥只存在维护者本机与这里 |
+| 本仓库 | `APPLE_CERT_P12_BASE64` / `APPLE_CERT_PASSWORD` | 固定自签名证书，签名身份跨版本不变，否则每次更新后屏幕录制授权失效 |
 
 `latest.json` 的地址被写死在 App 里（`src-tauri/tauri.conf.json` 的 `plugins.updater.endpoints`）；本仓库改名的话要同步改源码里的这个 URL。
