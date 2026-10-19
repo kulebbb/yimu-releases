@@ -5,7 +5,7 @@
 ## 安装
 
 1. 打开 [Releases](https://github.com/kulebbb/CC-4-No-CC-releases/releases/latest)，下载最新的 `.dmg`
-2. 打开 dmg，把「译幕」拖进「应用程序」
+2. 打开 dmg，把 `Yimu`（Finder 里显示为「译幕」）拖进「应用程序」
 3. 首次启动会被 Gatekeeper 拦住（构建未做 Apple 公证）：右键 App → 打开，或执行
    ```bash
    xattr -dr com.apple.quarantine "/Applications/译幕.app"
