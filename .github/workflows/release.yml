@@ -1,0 +1,75 @@
+name: Release
+
+# 源码在私有仓库 kulebbb/CC-4-No-CC；本仓库只承载安装包与 latest.json。
+# 触发方式：手动 workflow_dispatch，填要发布的 tag（源码仓库里已经存在并推送的 tag）。
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '要发布的 tag，例如 v0.2.2'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    # 必须用 macOS 26 镜像：screencapturekit 的传递依赖 apple-metal 用了 macOS 26
+    # SDK 才有的 Metal 接口，macos-15 镜像的 SDK 编不过。
+    runs-on: macos-26
+    steps:
+      - name: 检出私有源码（按 tag）
+        uses: actions/checkout@v5
+        with:
+          repository: kulebbb/CC-4-No-CC
+          ref: ${{ inputs.tag }}
+          token: ${{ secrets.SOURCE_REPO_TOKEN }}
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - run: npm ci
+
+      - name: 校验 tag 与三处版本号一致
+        run: |
+          TAG="${INPUT_TAG#v}"
+          PKG=$(node -p "require('./package.json').version")
+          CONF=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          CARGO=$(grep -m1 '^version = ' src-tauri/Cargo.toml | cut -d'"' -f2)
+          echo "tag=$TAG package=$PKG tauri.conf=$CONF Cargo=$CARGO"
+          if [ "$TAG" != "$PKG" ] || [ "$TAG" != "$CONF" ] || [ "$TAG" != "$CARGO" ]; then
+            echo "::error::tag 与 package.json / tauri.conf.json / Cargo.toml 的版本号不一致"
+            exit 1
+          fi
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+
+      - name: 类型检查与测试
+        run: |
+          npm run compile
+          npm test
+
+      # 产物发到本仓库：.dmg、.app.tar.gz、.sig、latest.json。
+      # 必须是正式发布（非草稿）：草稿不算 latest，releases/latest/download/latest.json 会 404。
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ inputs.tag }}
+          releaseName: '译幕 ${{ inputs.tag }}'
+          releaseBody: |
+            未签名的 macOS 构建：首次安装请右键 App → 打开（或执行 `xattr -dr com.apple.quarantine "/Applications/译幕.app"`）。
+            装好之后，后续版本会在 App 内提示更新。
+          releaseDraft: false
+          prerelease: false
