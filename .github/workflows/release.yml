@@ -81,7 +81,7 @@ jobs:
           tagName: ${{ inputs.tag }}
           releaseName: '译幕 ${{ inputs.tag }}'
           releaseBody: |
-            未签名的 macOS 构建：首次安装请右键 App → 打开（或执行 `xattr -dr com.apple.quarantine "/Applications/译幕.app"`）。
+            未签名的 macOS 构建：首次安装请右键 App → 打开（或执行 `xattr -dr com.apple.quarantine "/Applications/Yimu.app"`）。
             装好之后，后续版本会在 App 内提示更新。
           releaseDraft: false
           prerelease: false
