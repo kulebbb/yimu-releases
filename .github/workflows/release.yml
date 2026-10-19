@@ -23,13 +23,12 @@ jobs:
           GH_TOKEN: ${{ secrets.SOURCE_REPO_TOKEN }}
           INPUT_TAG: ${{ inputs.tag }}
         run: |
-          set +e
-          echo "--- 仓库可见性 ---"
-          gh api /repos/kulebbb/CC-4-No-CC --jq '{full_name,private,permissions}'
-          echo "--- 当前 token 身份 ---"
-          gh api /user --jq '{login,type}'
-          echo "--- 读取该仓库某个 tag ---"
-          gh api /repos/kulebbb/CC-4-No-CC/git/ref/tags/${INPUT_TAG} --jq '.ref' || echo "读 tag 失败"
+          set -e
+          echo "仓库可见性：$(gh api /repos/kulebbb/CC-4-No-CC --jq '{full_name,private}' 2>&1)"
+          if ! gh api /repos/kulebbb/CC-4-No-CC/git/ref/tags/${INPUT_TAG} --jq .ref; then
+            echo "::error::SOURCE_REPO_TOKEN 读不到私有仓库的 tag。细粒度 PAT 需要：Repository access 包含 kulebbb/CC-4-No-CC，且 Repository permissions → Contents = Read-only。"
+            exit 1
+          fi
 
       - name: 检出私有源码（按 tag）
         uses: actions/checkout@v5
