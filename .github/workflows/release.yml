@@ -18,6 +18,19 @@ jobs:
     # SDK 才有的 Metal 接口，macos-15 镜像的 SDK 编不过。
     runs-on: macos-26
     steps:
+      - name: 校验 SOURCE_REPO_TOKEN
+        env:
+          GH_TOKEN: ${{ secrets.SOURCE_REPO_TOKEN }}
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          set +e
+          echo "--- 仓库可见性 ---"
+          gh api /repos/kulebbb/CC-4-No-CC --jq '{full_name,private,permissions}'
+          echo "--- 当前 token 身份 ---"
+          gh api /user --jq '{login,type}'
+          echo "--- 读取该仓库某个 tag ---"
+          gh api /repos/kulebbb/CC-4-No-CC/git/ref/tags/${INPUT_TAG} --jq '.ref' || echo "读 tag 失败"
+
       - name: 检出私有源码（按 tag）
         uses: actions/checkout@v5
         with:
